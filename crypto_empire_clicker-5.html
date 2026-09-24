@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Crypto Empire Clicker</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at top,#182b52,#080d19 60%);color:#eef4ff;min-height:100vh}
+button{font:inherit}.app{max-width:620px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+h1{font-size:22px;margin:5px 0}.sub{color:#8fa7ca;font-size:12px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+.card{background:#111b2d;border:1px solid #263956;border-radius:16px;padding:12px;box-shadow:0 8px 30px #0004}.label{color:#8fa7ca;font-size:12px}.value{font-size:23px;font-weight:800;margin-top:4px}
+.mine{margin:15px 0;text-align:center}.coin{width:min(62vw,260px);height:min(62vw,260px);max-width:260px;max-height:260px;border-radius:50%;margin:18px auto;display:grid;place-items:center;cursor:pointer;user-select:none;background:radial-gradient(circle at 35% 30%,#bff5ff,#39b8ff 35%,#1666e8 65%,#092b8b);border:8px solid #6bdcff;box-shadow:0 0 35px #28bfff88, inset 0 -18px 30px #061d72aa;font-size:72px;font-weight:900;transition:.08s;touch-action:manipulation}
+.coin:active{transform:scale(.94)}.power{font-size:13px;color:#a9bddb}.bar{height:8px;background:#09111f;border-radius:99px;overflow:hidden;margin-top:7px}.fill{height:100%;background:#39c5ff;width:0%}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0}.tab,.buy{border:1px solid #29415f;background:#142238;color:white;border-radius:12px;padding:11px;cursor:pointer}.tab.active{background:#2164aa;border-color:#4dbfff}
+.panel{display:none}.panel.active{display:block}.upgrade{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:8px 0}.upgrade b{display:block}.upgrade small{color:#91a5c3}.buy{white-space:nowrap;background:#174d37;border-color:#267d58}.buy:disabled{opacity:.4}.ach{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #22324b}.done{color:#5ee6a3}.danger{background:#351a24;border-color:#6b2b3c}.note{font-size:11px;color:#7e91ad;text-align:center;margin:15px 0}
+#float{position:fixed;pointer-events:none;font-weight:900;color:#74ddff;font-size:20px;animation:up .7s forwards}@keyframes up{to{transform:translateY(-70px);opacity:0}}
+</style>
+</head>
+<body>
+<div class="app">
+ <div class="top"><div><h1>₿ CRYPTO EMPIRE</h1><div class="sub">Построй свою виртуальную криптоимперию</div></div><button class="tab" id="saveBtn">Сохранить</button></div>
+ <div class="stats">
+  <div class="card"><div class="label">Баланс</div><div class="value" id="coins">0</div><div class="label">CRX</div></div>
+  <div class="card"><div class="label">Доход / сек</div><div class="value" id="income">0</div><div class="label">CRX</div></div>
+ </div>
+ <div class="mine">
+  <div class="power">Нажми на монету • +<b id="tap">1</b> CRX</div>
+  <div class="coin" id="coin">₿</div>
+  <div class="bar"><div class="fill" id="xp"></div></div>
+  <div class="sub" id="level">Уровень 1 • 0 / 100 XP</div>
+ </div>
+ <div class="tabs">
+  <button class="tab active" data-tab="upgrades">Прокачка</button>
+  <button class="tab" data-tab="market">Рынок</button>
+  <button class="tab" data-tab="ach">Ачивки</button>
+ </div>
+ <section class="panel active" id="upgrades"></section>
+ <section class="panel" id="market">
+   <div class="card"><b>📈 Курс CRX</b><p id="price">1 CRX = 1.00</p><small class="sub">Внутриигровой курс. Он меняется со временем.</small></div>
+   <div class="card" style="margin-top:9px"><b>⚡ Бустер</b><p>На 30 секунд доход от кликов ×3.</p><button class="buy" id="boost">Купить за 250 CRX</button></div>
+ </section>
+ <section class="panel" id="ach"></section>
+ <div class="note">Игра полностью виртуальная: CRX не является реальной криптовалютой.</div>
+</div>
+<script>
+const key='crypto_empire_save_v1';
+let s=JSON.parse(localStorage.getItem(key)||'null')||{coins:0,xp:0,level:1,price:1,taps:0,boost:0,up:{tap:0,rig:0,server:0,bot:0,lab:0}};
+const U=[
+ ['tap','⛏️ Усиленный клик','+1 CRX за клик',20,n=>n+1],
+ ['rig','🖥️ Майнинг-риг','+2 CRX/сек',80,n=>n+1],
+ ['server','🏢 Серверная','+12 CRX/сек',500,n=>n+1],
+ ['bot','🤖 Торговый бот','+70 CRX/сек',2800,n=>n+1],
+ ['lab','🧪 Крипто-лаборатория','+400 CRX/сек',15000,n=>n+1]
+];
+const $=id=>document.getElementById(id);
+function cost(i){let base=U[i][3];return Math.floor(base*Math.pow(1.55,s.up[U[i][0]]))}
+function income(){return s.up.rig*2+s.up.server*12+s.up.bot*70+s.up.lab*400}
+function tapPower(){return 1+s.up.tap}
+function fmt(n){return n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(2)+'K':Math.floor(n).toLocaleString('ru-RU')}
+function render(){
+ $('coins').textContent=fmt(s.coins);$('income').textContent=fmt(income());$('tap').textContent=fmt(tapPower()*(s.boost>0?3:1));
+ let need=100*Math.pow(1.35,s.level-1);$('level').textContent=`Уровень ${s.level} • ${Math.floor(s.xp)} / ${Math.floor(need)} XP`;$('xp').style.width=Math.min(100,s.xp/need*100)+'%';
+ $('price').textContent='1 CRX = '+s.price.toFixed(2)+' $CRX';
+ $('upgrades').innerHTML=U.map((u,i)=>`<div class="card upgrade"><div><b>${u[1]}</b><small>${u[2]} • Ур. ${s.up[u[0]]}</small></div><button class="buy" onclick="buy(${i})">Купить<br>${fmt(cost(i))}</button></div>`).join('');
+ const A=[['Первый блок',s.taps>=1],['100 кликов',s.taps>=100],['1K кликов',s.taps>=1000],['Уровень 5',s.level>=5],['Миллионер',s.coins>=1e6],['Майнинг-ферма',s.up.rig>=10],['Империя',s.up.lab>=5]];
+ $('ach').innerHTML='<div class="card">'+A.map(a=>`<div class="ach"><span>${a[0]}</span><b class="${a[1]?'done':''}">${a[1]?'✓':'○'}</b></div>`).join('')+'</div>';
+ $('boost').disabled=s.coins<250||s.boost>0;$('boost').textContent=s.boost>0?`Активен: ${Math.ceil(s.boost)}с`:'Купить за 250 CRX';
+}
+function save(){localStorage.setItem(key,JSON.stringify(s))}
+function buy(i){let u=U[i],c=cost(i);if(s.coins>=c){s.coins-=c;s.up[u[0]]++;s.xp+=c*.08;save();render()}}
+$('coin').onclick=e=>{let v=tapPower()*(s.boost>0?3:1);s.coins+=v;s.xp+=v;s.taps++;let need=100*Math.pow(1.35,s.level-1);while(s.xp>=need){s.xp-=need;s.level++;need=100*Math.pow(1.35,s.level-1)}let f=document.createElement('div');f.id='float';f.textContent='+'+fmt(v);f.style.left=e.clientX+'px';f.style.top=e.clientY+'px';document.body.appendChild(f);setTimeout(()=>f.remove(),700);render()};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{if(!b.dataset.tab)return;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab).classList.add('active')});
+$('boost').onclick=()=>{if(s.coins>=250&&s.boost<=0){s.coins-=250;s.boost=30;render()}};
+$('saveBtn').onclick=()=>{save();$('saveBtn').textContent='Сохранено ✓';setTimeout(()=>$('saveBtn').textContent='Сохранить',1000)};
+setInterval(()=>{s.coins+=income()/10;s.boost=Math.max(0,s.boost-.1);s.price=Math.max(.25,s.price+(Math.random()-.48)*.03);render()},100);
+render();
+</script>
+</body></html>
